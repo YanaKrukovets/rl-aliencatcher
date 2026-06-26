@@ -4,13 +4,25 @@
 
 export const ACTION_DIMS = [3, 2, 2, 4]; // move(L/stay/R), shoot, shield, buy(none/bullets/shield/life)
 
-// Hard action rule applied identically in training and playback so behavior is
-// consistent: the shield only deflects meteor-storm rocks, so it may ONLY be
-// activated while a meteor storm is active. Returns a (possibly) modified action.
+// Hard action rules applied identically in training and playback so behavior is
+// consistent. Returns a (possibly) modified action [move, shoot, shield, buy].
+export const SHIELD_COST = 70;       // coin cost of a shield (matches main.js)
+export const SHIELD_LOW = 1;         // "running low" threshold
+
 export function maskAction(action, state) {
   const a = action.slice();
+
+  // 1) The shield only deflects meteor-storm rocks, so it may ONLY be activated
+  //    while a meteor storm is active.
   const stormActive = (state.meteorStormFrames || 0) > 0;
-  if (!stormActive) a[2] = 0; // suppress shield outside a meteor storm
+  if (!stormActive) a[2] = 0;
+
+  // 2) Restock shields when running low and affordable — buy a shield (buy=2) as
+  //    soon as the stock drops to/below the threshold and coins allow it.
+  if ((state.shields || 0) <= SHIELD_LOW && (state.coins || 0) >= SHIELD_COST) {
+    a[3] = 2;
+  }
+
   return a;
 }
 
